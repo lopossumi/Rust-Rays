@@ -1,5 +1,6 @@
 use crate::sphere::*;
 use crate::vector::*;
+use crate::hittable::*;
 
 pub struct Ray {
     pub origin: Point3,
@@ -20,16 +21,19 @@ impl Ray {
 
     pub fn color(&self) -> Color {
         let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
-        let t = sphere.hit(self);
-        if t > 0.0 {
-            let n = (self.at(t) - Vec3::new(0.0, 0.0, -1.0)).unit_vector();
-            return 0.5 * Color::new(n.x + 1.0, n.y + 1.0, n.z + 1.0);
-        }
-    
-        let unit_direction = self.direction.unit_vector();
-        let t = 0.5 * (unit_direction.y + 1.0);
+        let t = sphere.hit(&self);
+        match t {
+            Some(record) => {
+                let n = (self.at(record.t) - Vec3::new(0.0, 0.0, -1.0)).unit_vector();
+                0.5 * Color::new(n.x + 1.0, n.y + 1.0, n.z + 1.0)
+            }
 
-        (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
+            None => {
+                let unit_direction = self.direction.unit_vector();
+                let t = 0.5 * (unit_direction.y + 1.0);
+                (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)        
+            }
+        }
     }
 }
 

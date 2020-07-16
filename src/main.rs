@@ -3,6 +3,7 @@ use image::{ImageBuffer, Rgb, RgbImage};
 mod ray;
 mod vector;
 mod sphere;
+mod hittable;
 
 use ray::Ray;
 use vector::Vec3;
@@ -34,7 +35,7 @@ fn main() {
         *pixel = Rgb(color);
     }
 
-    match buffer.save("normal_sphere.png") {
+    match buffer.save("next_sphere.png") {
         Err(e) => eprintln!("Error writing file: {}", e),
         Ok(()) => println!("Done."),
     };

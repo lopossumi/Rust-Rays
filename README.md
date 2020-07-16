@@ -21,7 +21,7 @@ pub struct Vec3 {
     pub z: f64,
 }
 ```
-These aliases can now be used interchangeably with ```Vec3``` (the compiler doesn't even mind if we accidentally mix them), so let's try them out in our ```Ray``` definition. Creating a new file called ```ray.rs``` and importing the vector stuff (imports were done with ```mod```, right?) we'll start with the following definition:
+These aliases can now be used interchangeably with ```Vec3``` - the compiler doesn't even mind if we accidentally mix them - so let's try them out in our ```Ray``` definition. Creating a new file called ```ray.rs``` and importing the vector stuff (imports were done with ```mod```, right?) we'll start with the following definition:
 
 ```rust
 mod vector;
@@ -56,7 +56,7 @@ help: possible candidate is found in another module, you can import it into scop
 2 | use crate::vector::Point3;
   |
 ```
-Right, so we already have the module? According to the compiler we can now import it into local scope with ```use crate::vector```. Let's try:
+Right, so we already have the module? According to the compiler we can now import it into local scope with ```use crate::vector```. Let's try again:
 ```rust
 use crate::vector::*;
 
@@ -191,4 +191,95 @@ After adding the coloring based on surface normals and simplifying the related e
 
 ## Traits and hittable objects
 
-WIP
+Our rays could hit other stuff besides spheres. Let's keep everything else the same while defining a simple *trait* and implement that for the ```Sphere```:
+```rust
+// hittable.rs
+use crate::ray::Ray;
+
+pub trait Hittable {
+    fn hit(&self, r: &Ray) -> f64;
+}
+```
+```rust
+// sphere.rs
+impl Hittable for Sphere {
+    fn hit(&self, ray: &Ray) -> f64 {
+        ...
+    }
+}
+```
+We also need some information about the hit besides a simple ```f64``` value. I guess we could do things the C++ way and return a boolean value (whether there was a hit or not) while providing a mutable struct containing the hit point, normal vector and so on. But there is another option in the standard library, namely ```Option```:
+
+> 📚 *Excerpt from [Rust docs](https://doc.rust-lang.org/std/option/index.html)*
+>
+> Type Option represents an optional value: every Option is either Some and contains a value, or None, and does not. Option types are very common in Rust code, as they have a number of uses:
+> * Initial values
+> * Return values for functions that are not defined over their entire input range (partial functions)
+> * Return value for otherwise reporting simple errors, where None is returned on error
+> * Optional struct fields
+> * Struct fields that can be loaned or "taken"
+> * Optional function arguments
+> * Nullable pointers
+> * Swapping things out of difficult situations
+
+That sounds perfect! Let's modify the ```Hittable::hit``` return value to return an ```Option```:
+```rust
+use crate::ray::Ray;
+use crate::vector::*;
+
+struct Record {
+    p : Point3,
+    normal : Vec3,
+    t : f64
+}
+
+pub trait Hittable {
+    fn hit(&self, r: &Ray) -> Option<Record>;
+}
+```
+
+Now we can return ```Some``` with the hit record in case of a ray hit, or ```None``` in case of a miss:
+```rust
+// sphere.rs
+...
+        if discriminant > 0.0 {
+
+            let root = discriminant.sqrt();
+            let mut temp = (-half_b - root)/a;
+            if temp < T_MAX && temp > T_MIN {
+                let t = temp;
+                let p = ray.at(t);
+                let normal = (p - self.center) / self.radius;
+                
+                return Some(Record::new(p, normal, t));
+            }
+            temp = (-half_b + root) / a;
+            if temp < T_MAX && temp > T_MIN {
+                let t = temp;
+                let p = ray.at(t);
+                let normal = (p - self.center) / self.radius;
+                
+                return Some(Record::new(p, normal, t));
+            }
+        }
+
+        None  
+```
+And use ```match``` in our ```Ray``` coloring code:
+```rust
+// ray.rs
+        ...
+        match t {
+            Some(record) => {
+                let n = (self.at(record.t) - Vec3::new(0.0, 0.0, -1.0)).unit_vector();
+                0.5 * Color::new(n.x + 1.0, n.y + 1.0, n.z + 1.0)
+            }
+
+            None => {
+                let unit_direction = self.direction.unit_vector();
+                let t = 0.5 * (unit_direction.y + 1.0);
+                (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)        
+            }
+        }
+```
+>💡 Note: I'm not missing any semicolons: the last expression in a block is returned, and idiomatic Rust code uses ```return```statements only for early returns (e.g. as in ```Sphere``` when the object is hit).
