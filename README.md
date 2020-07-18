@@ -1,8 +1,8 @@
 # Learning Rust Part 4: Rays
 
-> 📚 Series: [Part 1](https://github.com/lopossumi/Rust-Hello) - [Part 2](https://github.com/lopossumi/Rust-Output-Image) - [Part 3](https://github.com/lopossumi/Rust-Vectors)
+> 📚 Series: [Part 1](https://github.com/lopossumi/Rust-Hello) - [Part 2](https://github.com/lopossumi/Rust-Output-Image) - [Part 3](https://github.com/lopossumi/Rust-Vectors) - [Part 4](https://github.com/lopossumi/Rust-Rays) - [Part 5](https://github.com/lopossumi/Rust-Materials)
 
-In the previous session we created some 3D vectors, which can be used to mark a position or distance in space. For ray tracing, we'll of course need rays. 
+In the [previous session](https://github.com/lopossumi/Rust-Vectors) we created some 3D vectors, which can be used to mark a position or distance in space. For ray tracing, we'll of course need rays. 
 
 ## Type aliases
 
@@ -355,4 +355,4 @@ Result:
 
 ![two_spheres.png](two_spheres.png)
 
-In the next session we'll add antialiasing and some materials.
+In the [next session](https://github.com/lopossumi/Rust-Materials) we'll add antialiasing and some materials.
