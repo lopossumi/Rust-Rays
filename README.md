@@ -197,13 +197,13 @@ Our rays could hit other stuff besides spheres. Let's keep everything else the s
 use crate::ray::Ray;
 
 pub trait Hittable {
-    fn hit(&self, r: &Ray) -> f64;
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> f64;
 }
 ```
 ```rust
 // sphere.rs
 impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray) -> f64 {
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> f64 {
         ...
     }
 }
@@ -234,7 +234,7 @@ struct Record {
 }
 
 pub trait Hittable {
-    fn hit(&self, r: &Ray) -> Option<Record>;
+    fn hit(&self, r: &Ray, t_min: f64, t_max: f64) -> Option<Record>;
 }
 ```
 
@@ -246,7 +246,7 @@ Now we can return ```Some``` with the hit record in case of a ray hit, or ```Non
 
             let root = discriminant.sqrt();
             let mut temp = (-half_b - root)/a;
-            if temp < T_MAX && temp > T_MIN {
+            if temp < t_max && temp > t_min {
                 let t = temp;
                 let p = ray.at(t);
                 let normal = (p - self.center) / self.radius;
@@ -254,7 +254,7 @@ Now we can return ```Some``` with the hit record in case of a ray hit, or ```Non
                 return Some(Record::new(p, normal, t));
             }
             temp = (-half_b + root) / a;
-            if temp < T_MAX && temp > T_MIN {
+            if temp < t_max && temp > t_min {
                 let t = temp;
                 let p = ray.at(t);
                 let normal = (p - self.center) / self.radius;
@@ -265,21 +265,94 @@ Now we can return ```Some``` with the hit record in case of a ray hit, or ```Non
 
         None  
 ```
-And use ```match``` in our ```Ray``` coloring code:
+And use ```match``` in our ```Ray``` coloring code along with some constant colors:
 ```rust
 // ray.rs
+const COLOR_WHITE: Color = Color { x: 1.0, y: 1.0, z: 1.0};
+const COLOR_SKYBLUE: Color = Color { x: 0.5, y: 0.7, z: 1.0 };
         ...
         match t {
             Some(record) => {
-                let n = (self.at(record.t) - Vec3::new(0.0, 0.0, -1.0)).unit_vector();
-                0.5 * Color::new(n.x + 1.0, n.y + 1.0, n.z + 1.0)
+                0.5 * (COLOR_WHITE + record.normal.unit_vector())
             }
 
             None => {
                 let unit_direction = self.direction.unit_vector();
                 let t = 0.5 * (unit_direction.y + 1.0);
-                (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)        
+                (1.0 - t) * COLOR_WHITE + t * COLOR_SKYBLUE
             }
         }
 ```
->💡 Note: I'm not missing any semicolons: the last expression in a block is returned, and idiomatic Rust code uses ```return```statements only for early returns (e.g. as in ```Sphere``` when the object is hit).
+>💡 Note: I'm not missing any semicolons: the last expression in a block is returned, and idiomatic Rust code uses ```return``` statements only for early returns (e.g. as in ```Sphere``` when the object is hit).
+
+## Resizable arrays (vectors)
+
+We only have one type of hittable objects for now, so ```HittableList``` can contain simply a vector (```Vec```) of ```Sphere```s. Let's create a constructor that returns a world with two spheres:
+
+```rust
+// hittable_list.rs
+use crate::hittable::*;
+use crate::ray::*;
+use crate::sphere::*;
+use crate::vector::*;
+
+pub struct HittableList {
+    pub objects: Vec<Sphere>,
+}
+
+impl HittableList {
+    pub fn new() -> HittableList {
+        let mut spheres = Vec::new();
+        spheres.push(Sphere::new(Point3::new(0.0, 0.0, -1.0), 0.5));
+        spheres.push(Sphere::new(Point3::new(0.0,-100.5,-1.0), 100.0));
+        HittableList { objects: spheres }
+    }
+}
+```
+Then, make the list of objects implement ```Hittable```. Now ```hit``` will return the hit record of the closest object that the ray collides with:
+```rust
+impl Hittable for HittableList {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Record> {
+        let mut temp_rec = Record::new(
+            Point3::new(0.0, 0.0, 0.0),
+            Vec3::new(0.0, 0.0, 0.0),
+            t_max,
+            true,
+        );
+
+        for object in &self.objects {
+            match object.hit(ray, t_min, t_max) {
+                Some(record) => {
+                    if record.t < temp_rec.t {
+                        temp_rec = record;
+                    }
+                }
+                None => {}
+            }
+        }
+
+        if temp_rec.t == t_max {
+            None
+        } else {
+            Some(temp_rec)
+        }
+    }
+}
+```
+Now all we need to do is to pass the world to the ray coloring function:
+```rust
+// ray.rs
+impl Ray {
+    pub fn color(&self, world: &HittableList) -> Color {
+        let t = world.hit(&self, T_MIN, T_MAX);
+        match t {
+            Some(record) => { ... }
+            None => { ... }
+        }
+    }
+```
+Result:
+
+![two_spheres.png](two_spheres.png)
+
+In the next session we'll add antialiasing and some materials.

@@ -16,12 +16,8 @@ impl Sphere {
     }
 }
 
-const T_MAX: f64 = 9999999.0;
-const T_MIN: f64 = 0.0001;
-
-
 impl Hittable for Sphere {
-    fn hit(&self, ray: &Ray) -> Option<Record> {
+    fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<Record> {
         let oc = ray.origin - self.center;
         let a = ray.direction.length_squared();
         let half_b = oc.dot(ray.direction);
@@ -32,20 +28,20 @@ impl Hittable for Sphere {
 
             let root = discriminant.sqrt();
             let mut temp = (-half_b - root)/a;
-            if temp < T_MAX && temp > T_MIN {
+            if temp < t_max && temp > t_min {
                 let t = temp;
                 let p = ray.at(t);
-                let normal = (p - self.center) / self.radius;
-                
-                return Some(Record::new(p, normal, t));
+                let outward_normal = (p - self.center) / self.radius;
+                let front_face = ray.direction.dot(outward_normal) < 0.0;
+                return Some(Record::new(p, outward_normal, t, front_face));
             }
             temp = (-half_b + root) / a;
-            if temp < T_MAX && temp > T_MIN {
+            if temp < t_max && temp > t_min {
                 let t = temp;
                 let p = ray.at(t);
-                let normal = (p - self.center) / self.radius;
-                
-                return Some(Record::new(p, normal, t));
+                let outward_normal = (p - self.center) / self.radius;
+                let front_face = ray.direction.dot(outward_normal) < 0.0;
+                return Some(Record::new(p, outward_normal, t, front_face));
             }
         }
 

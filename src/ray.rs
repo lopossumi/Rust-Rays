@@ -1,6 +1,12 @@
-use crate::sphere::*;
 use crate::vector::*;
 use crate::hittable::*;
+use crate::hittable_list::*;
+
+const T_MIN: f64 = 0.0001;
+const T_MAX: f64 = f64::MAX;
+
+const COLOR_WHITE: Color = Color { x: 1.0, y: 1.0, z: 1.0};
+const COLOR_SKYBLUE: Color = Color { x: 0.5, y: 0.7, z: 1.0 };
 
 pub struct Ray {
     pub origin: Point3,
@@ -19,19 +25,17 @@ impl Ray {
         self.origin + distance * self.direction
     }
 
-    pub fn color(&self) -> Color {
-        let sphere = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5);
-        let t = sphere.hit(&self);
+    pub fn color(&self, world: &HittableList) -> Color {
+        let t = world.hit(&self, T_MIN, T_MAX);
         match t {
             Some(record) => {
-                let n = (self.at(record.t) - Vec3::new(0.0, 0.0, -1.0)).unit_vector();
-                0.5 * Color::new(n.x + 1.0, n.y + 1.0, n.z + 1.0)
+                0.5 * (COLOR_WHITE + record.normal.unit_vector())
             }
 
             None => {
                 let unit_direction = self.direction.unit_vector();
                 let t = 0.5 * (unit_direction.y + 1.0);
-                (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)        
+                (1.0 - t) * COLOR_WHITE + t * COLOR_SKYBLUE
             }
         }
     }
